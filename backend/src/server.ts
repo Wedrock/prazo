@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { config } from "./config";
 import { authRoutes } from "./routes/authRoutes";
+import { tarefaRoutes } from "./routes/tarefaRoutes";
 import { tratarErros } from "./middlewares/tratarErros";
 
 const app = express();
@@ -14,6 +15,7 @@ app.get("/health", (_request, response) => {
 });
 
 app.use("/auth", authRoutes);
+app.use("/tarefas", tarefaRoutes);
 
 // Precisa vir depois das rotas
 app.use(tratarErros);
