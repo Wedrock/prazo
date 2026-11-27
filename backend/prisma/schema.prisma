@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Prioridade {
+  BAIXA
+  MEDIA
+  ALTA
+}
+
+enum Status {
+  A_FAZER
+  FAZENDO
+  FEITO
+}
+
+model Usuario {
+  id       String   @id @default(uuid())
+  nome     String
+  email    String   @unique
+  senha    String
+  criadoEm DateTime @default(now())
+  tarefas  Tarefa[]
+}
+
+model Tarefa {
+  id           String     @id @default(uuid())
+  titulo       String
+  descricao    String?
+  // @db.Date guarda só o dia, sem hora: evita a tarefa "pular" para o dia anterior por causa do fuso
+  prazo        DateTime   @db.Date
+  prioridade   Prioridade @default(MEDIA)
+  categoria    String?
+  status       Status     @default(A_FAZER)
+  usuarioId    String
+  usuario      Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  criadoEm     DateTime   @default(now())
+  atualizadoEm DateTime   @updatedAt
+}
