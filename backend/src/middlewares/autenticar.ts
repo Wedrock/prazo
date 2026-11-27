@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 import { config } from "../config";
 import { ErroApp } from "./tratarErros";
 
-// Acrescenta o campo usuarioId ao Request do Express
 declare global {
   namespace Express {
     interface Request {
@@ -31,7 +30,6 @@ export function autenticar(request: Request, _response: Response, next: NextFunc
   next();
 }
 
-// Use dentro de rotas protegidas: garante que o usuarioId existe
 export function usuarioLogado(request: Request): string {
   if (!request.usuarioId) {
     throw new ErroApp("Token não informado", 401);

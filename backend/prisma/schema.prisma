@@ -32,7 +32,7 @@ model Tarefa {
   id           String     @id @default(uuid())
   titulo       String
   descricao    String?
-  // @db.Date guarda só o dia, sem hora: evita a tarefa "pular" para o dia anterior por causa do fuso
+  // @db.Date guarda só o dia: evita a tarefa "pular" de dia por causa do fuso
   prazo        DateTime   @db.Date
   prioridade   Prioridade @default(MEDIA)
   categoria    String?

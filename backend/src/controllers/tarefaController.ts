@@ -7,9 +7,7 @@ import { usuarioLogado } from "../middlewares/autenticar";
 const PRIORIDADES = Object.values(Prioridade);
 const STATUS = Object.values(Status);
 
-// ---------- validação ----------
-
-// Aceita só "AAAA-MM-DD" e guarda à meia-noite UTC (o banco guarda só o dia)
+// Guarda à meia-noite UTC; a comparação com toISOString recusa datas como 2026-02-30
 function lerData(valor: unknown, campo: string): Date {
   if (typeof valor !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
     throw new ErroApp(`${campo} deve estar no formato AAAA-MM-DD`);
@@ -28,7 +26,6 @@ function lerOpcao<T extends string>(valor: unknown, opcoes: T[], campo: string):
   return valor.toUpperCase() as T;
 }
 
-// Texto opcional: string vazia ou null viram null (apaga o campo)
 function lerTextoOpcional(valor: unknown, campo: string): string | null {
   if (valor === null) return null;
   if (typeof valor !== "string") throw new ErroApp(`${campo} deve ser texto`);
@@ -42,7 +39,6 @@ function lerTitulo(valor: unknown): string {
   return titulo;
 }
 
-// Com parcial = true, só valida os campos que vieram (usado no PATCH)
 function lerTarefa(corpo: Record<string, unknown>, parcial: boolean) {
   const dados: Partial<tarefaService.DadosTarefa> = {};
 
@@ -58,53 +54,29 @@ function lerTarefa(corpo: Record<string, unknown>, parcial: boolean) {
   return dados;
 }
 
-function corpoDe(request: Request): Record<string, unknown> {
-  const corpo = request.body;
-  if (!corpo || typeof corpo !== "object" || Array.isArray(corpo)) {
-    throw new ErroApp("Envie os dados da tarefa em JSON");
-  }
-  return corpo;
-}
-
 function textoDaQuery(valor: unknown): string | undefined {
   return typeof valor === "string" && valor.trim() ? valor.trim() : undefined;
 }
 
-// ---------- handlers ----------
-
 export async function listar(request: Request, response: Response) {
-  const q = request.query;
-  const filtros: tarefaService.FiltrosTarefa = {};
+  const categoria = textoDaQuery(request.query.categoria);
+  const prioridade = textoDaQuery(request.query.prioridade);
 
-  const status = textoDaQuery(q.status);
-  const prioridade = textoDaQuery(q.prioridade);
-  const prazoDe = textoDaQuery(q.prazoDe);
-  const prazoAte = textoDaQuery(q.prazoAte);
-
-  if (status) filtros.status = lerOpcao(status, STATUS, "status");
-  if (prioridade) filtros.prioridade = lerOpcao(prioridade, PRIORIDADES, "prioridade");
-  if (prazoDe) filtros.prazoDe = lerData(prazoDe, "prazoDe");
-  if (prazoAte) filtros.prazoAte = lerData(prazoAte, "prazoAte");
-  filtros.categoria = textoDaQuery(q.categoria);
-  filtros.busca = textoDaQuery(q.busca);
-
-  const tarefas = await tarefaService.listar(usuarioLogado(request), filtros);
+  const tarefas = await tarefaService.listar(usuarioLogado(request), {
+    categoria,
+    prioridade: prioridade ? lerOpcao(prioridade, PRIORIDADES, "prioridade") : undefined,
+  });
   return response.json(tarefas);
 }
 
-export async function buscar(request: Request<{ id: string }>, response: Response) {
-  const tarefa = await tarefaService.buscar(usuarioLogado(request), request.params.id);
-  return response.json(tarefa);
-}
-
 export async function criar(request: Request, response: Response) {
-  const dados = lerTarefa(corpoDe(request), false) as tarefaService.DadosTarefa;
+  const dados = lerTarefa(request.body ?? {}, false) as tarefaService.DadosTarefa;
   const tarefa = await tarefaService.criar(usuarioLogado(request), dados);
   return response.status(201).json(tarefa);
 }
 
 export async function atualizar(request: Request<{ id: string }>, response: Response) {
-  const dados = lerTarefa(corpoDe(request), true);
+  const dados = lerTarefa(request.body ?? {}, true);
   if (Object.keys(dados).length === 0) {
     throw new ErroApp("Envie pelo menos um campo para atualizar");
   }

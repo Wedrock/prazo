@@ -12,40 +12,26 @@ export type DadosTarefa = {
 };
 
 export type FiltrosTarefa = {
-  status?: Status;
-  prioridade?: Prioridade;
   categoria?: string;
-  busca?: string;
-  prazoDe?: Date;
-  prazoAte?: Date;
+  prioridade?: Prioridade;
 };
 
 export async function listar(usuarioId: string, filtros: FiltrosTarefa) {
   const where: Prisma.TarefaWhereInput = { usuarioId };
 
-  if (filtros.status) where.status = filtros.status;
   if (filtros.prioridade) where.prioridade = filtros.prioridade;
   if (filtros.categoria) {
     where.categoria = { equals: filtros.categoria, mode: "insensitive" };
   }
-  if (filtros.busca) {
-    where.OR = [
-      { titulo: { contains: filtros.busca, mode: "insensitive" } },
-      { descricao: { contains: filtros.busca, mode: "insensitive" } },
-    ];
-  }
-  if (filtros.prazoDe || filtros.prazoAte) {
-    where.prazo = { gte: filtros.prazoDe, lte: filtros.prazoAte };
-  }
 
   return prisma.tarefa.findMany({
     where,
-    // Prazo mais próximo primeiro; no mesmo dia, ALTA antes de BAIXA
+    // No Postgres o enum segue a ordem de declaração, então "desc" põe ALTA antes de BAIXA
     orderBy: [{ prazo: "asc" }, { prioridade: "desc" }, { criadoEm: "asc" }],
   });
 }
 
-// Busca a tarefa só se ela for do usuário; de outro usuário responde 404, como se não existisse
+// Tarefa de outro usuário responde 404, como se não existisse
 export async function buscar(usuarioId: string, id: string) {
   const tarefa = await prisma.tarefa.findFirst({ where: { id, usuarioId } });
   if (!tarefa) {
